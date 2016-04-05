@@ -6,13 +6,13 @@ This express app allows the implicit grant of a GitHub oauth token to whiteliste
 
 The app need following environment variables.
 
-- `BASE_URL`, the base url (including tailing slash) where the app is running – e.g. https://my-auth.herokuapp.com/ or http://localhost:3000/
+- `BASE_URL`, the base url where the app is running – including tailing slash, https unless node environment is development
 - `SESSION_SECRET`, the secret used to sign the session ID cookie
 - `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`, [register a new app on GitHub](https://github.com/settings/developers) – Authorization callback URL need to be `${BASE_URL}github/callback`
 - `CALLBACK_BASE_URLS`, comma separted base url allow to obtain tokens
+- `NODE_ENV`
 
 For development you can use an `.env` file:
-
 ```
 BASE_URL=
 SESSION_SECRET=

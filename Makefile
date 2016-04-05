@@ -5,7 +5,7 @@ all: server
 install: node_modules
 
 server: install
-	npm start
+	NODE_ENV=development npm start
 
 node_modules: package.json
 	@npm install

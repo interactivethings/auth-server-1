@@ -1,31 +1,65 @@
 const express = require('express');
 const session = require('express-session');
-const path = require('path');
-const crypto = require('crypto');
-const env = require('node-env-file');
 const fetch = require('node-fetch');
 const queryString = require('query-string');
 
-env(path.join(__dirname, '.env'), {raise: false});
+const __DEV__ = process.env.NODE_ENV === 'development';
+if (__DEV__) {
+  require('node-env-file')(
+    require('path').join(__dirname, '.env'),
+    {raise: false}
+  );
+}
+const DEFAULTS = {
+  PORT: 3000
+};
+const PARSE = {
+  CALLBACK_BASE_URLS: (value) => value.split(','),
+  BASE_URL: (value) => {
+    if (!__DEV__ && !value.startsWith('https://')) {
+      throw new Error('BASE_URL should be https');
+    }
+    if(!value.endsWith('/')) {
+      throw new Error('BASE_URL should include a tailing slash');
+    }
+    return value;
+  }
+};
+const config = [
+  'NODE_ENV', 'PORT', 'BASE_URL', 'SESSION_SECRET',
+  'GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET', 'CALLBACK_BASE_URLS'
+].reduce(
+  (reduction, key) => {
+    let value = process.env[key] || DEFAULTS[key];
+    if (!value) {
+      throw new Error(`Environment variable ${key} missing, see README.md#Configuration`);
+    }
+    if (PARSE[key]) {
+      value = PARSE[key](value);
+    }
+    reduction[key] = value;
+    return reduction;
+  },
+  {}
+);
 
 const app = express();
-
 app.enable('trust proxy');
+app.disable('x-powered-by');
 app.use(session({
   cookie: {
     path: '/',
     httpOnly: true,
-    secure: process.env.SECURE_COOKIE === 'OFF' ? false : true,
+    secure: !(__DEV__ && !config.BASE_URL.startsWith('https://')),
     maxAge: null
   },
-  secret: process.env.SESSION_SECRET || crypto.randomBytes(64).toString('hex'),
+  secret: config.SESSION_SECRET,
   resave: false,
   saveUninitialized: true
 }));
 
-const callbackBaseUrls = process.env.CALLBACK_BASE_URLS.split(',');
 const verifyCallbackUrl = (url) => {
-  return callbackBaseUrls.some((callbackBaseUrl) => url.startsWith(callbackBaseUrl));
+  return config.CALLBACK_BASE_URLS.some((callbackBaseUrl) => url.startsWith(callbackBaseUrl));
 };
 
 app.get('/github/callback', (request, response, next) => {
@@ -42,19 +76,19 @@ app.get('/github/callback', (request, response, next) => {
     return;
   }
   const parameters = {
-    client_id: process.env.GITHUB_CLIENT_ID,
-    client_secret: process.env.GITHUB_CLIENT_SECRET,
+    client_id: config.GITHUB_CLIENT_ID,
+    client_secret: config.GITHUB_CLIENT_SECRET,
     code: request.query.code,
     state: request.session.githubState
   };
   fetch(
-    'https://github.com/login/oauth/access_token?' + queryString.stringify(parameters),
+    `https://github.com/login/oauth/access_token?${queryString.stringify(parameters)}`,
     {method: 'POST', headers: {'Accept': 'application/json'}}
   )
     .then((response) => response.json().then(
       (data) => ({response, data}),
       (error) => {
-        throw new Error('Failed to parse JSON, ' + error)
+        throw new Error(`Failed to parse JSON, ${error}`)
       }
     ))
     .then((result) => {
@@ -64,11 +98,14 @@ app.get('/github/callback', (request, response, next) => {
         if (verifyCallbackUrl(callbackUrl)) {
           response
             .status(302)
-            .set('Location', `${callbackUrl}#${queryString.stringify({
-              code: result.data.access_token,
-              scope: result.data.scope,
-              state: parameters.state
-            })}`)
+            .set(
+              'Location',
+              `${callbackUrl}#${queryString.stringify({
+                code: result.data.access_token,
+                scope: result.data.scope,
+                state: parameters.state
+              })}`
+            )
             .end();
         } else {
           response.status(404).send('Not found');
@@ -94,10 +131,10 @@ app.get('/github/login', (request, response) => {
     response.status(400).send('A strong, user specific state parameter is required against CSRF attacks');
   }
   const parameters = {
-    client_id: process.env.GITHUB_CLIENT_ID,
+    client_id: config.GITHUB_CLIENT_ID,
     state: request.query.state,
     scope: request.query.scope,
-    redirect_uri: process.env.BASE_URL + 'github/callback'
+    redirect_uri: `${config.BASE_URL}github/callback`
   };
 
   request.session.callbackUrl = request.query.callbackUrl;
@@ -105,11 +142,10 @@ app.get('/github/login', (request, response) => {
 
   response
     .status(302)
-    .set('Location', 'https://github.com/login/oauth/authorize?' + queryString.stringify(parameters))
+    .set('Location', `https://github.com/login/oauth/authorize?${queryString.stringify(parameters)}`)
     .end();
 });
 
-const port = process.env.PORT || 3000;
-app.listen(port, function () {
-  console.log(`Listening on ${port}`);
+app.listen(config.PORT, function () {
+  console.info(`Listening on ${config.PORT}`);
 });
