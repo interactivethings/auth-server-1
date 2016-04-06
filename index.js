@@ -62,7 +62,7 @@ const verifyCallbackUrl = (url) => {
   return config.CALLBACK_BASE_URLS.some((callbackBaseUrl) => url.startsWith(callbackBaseUrl));
 };
 
-app.get('/github/callback', (request, response, next) => {
+app.get('/github/callback', (request, response) => {
   if (request.query.state !== request.session.githubState) {
     response.status(404).send('Not found');
     return;
@@ -146,6 +146,4 @@ app.get('/github/login', (request, response) => {
     .end();
 });
 
-app.listen(config.PORT, function () {
-  console.info(`Listening on ${config.PORT}`);
-});
+app.listen(config.PORT, () => console.info(`Listening on ${config.PORT}`)); // eslint-disable-line no-console

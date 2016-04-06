@@ -20,5 +20,8 @@
     "node-env-file": "^0.1.8",
     "node-fetch": "^1.4.1",
     "query-string": "^4.1.0"
+  },
+  "devDependencies": {
+    "eslint": "^2.7.0"
   }
 }
