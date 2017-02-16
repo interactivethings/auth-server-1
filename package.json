@@ -9,11 +9,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@bitbucket.org/interactivethings/auth-server.git"
+    "url": "git@github.com:tpreusse/auth-server.git"
   },
   "author": "tpreusse",
   "license": "UNLICENSED",
-  "homepage": "https://bitbucket.org/interactivethings/auth-server#readme",
+  "homepage": "https://github.com/tpreusse/auth-server",
   "dependencies": {
     "express": "^4.13.4",
     "express-session": "^1.13.0",
