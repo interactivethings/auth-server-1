@@ -12,7 +12,7 @@
     "url": "git@github.com:tpreusse/auth-server.git"
   },
   "author": "tpreusse",
-  "license": "UNLICENSED",
+  "license": "BSD-3-Clause",
   "homepage": "https://github.com/tpreusse/auth-server",
   "dependencies": {
     "express": "^4.13.4",
